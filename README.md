@@ -73,5 +73,3 @@ Enhance GUE spacing model
 Contributing
 
 Contributions are welcome! Please open an issue or submit a pull request.
-
-**Action:** Remember to replace `your-username` with your actual GitHub username.
