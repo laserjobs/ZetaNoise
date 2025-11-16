@@ -18,3 +18,60 @@ This structured noise can offer advantages over standard Gaussian or uniform noi
 
 ```bash
 pip install git+https://github.com/your-username/zetanoise.git
+
+(After you publish to PyPI, you will change this to pip install zetanoise)
+
+Quickstart
+
+Generate and visualize zeta-modulated noise in just a few lines:
+
+import matplotlib.pyplot as plt
+from zetanoise import ZetaNoiseGenerator
+
+# 1. Initialize the generator with the first 50 zeta zeros
+gen = ZetaNoiseGenerator(num_zeros=50)
+
+# 2. Generate a noise signal
+noise = gen.generate(length=4096, amplitude=0.05, seed=42)
+
+# 3. Analyze its spectrum
+freqs, spectrum = gen.spectrum(noise)
+stats = gen.stats(noise)
+
+print(f"First 5 Zeros: {gen.zeros[:5]}")
+print(f"Noise Stats: {stats}")
+
+# 4. Plot the results
+plt.figure(figsize=(12, 6))
+plt.subplot(2, 1, 1)
+plt.title("Zeta-Modulated Noise Signal")
+plt.plot(noise)
+plt.grid(True)
+
+plt.subplot(2, 1, 2)
+plt.title("Power Spectrum (Log Scale)")
+plt.plot(freqs, 10 * np.log10(spectrum))
+plt.xlabel("Frequency")
+plt.ylabel("Power (dB)")
+plt.xlim(0, 0.1) # Zoom in to see the zeta peaks
+plt.grid(True)
+
+plt.tight_layout()
+plt.show()
+Roadmap
+
+PyPI Package Release
+
+Implement UUR-adaptive amplitude modulation
+
+Create a scikit-learn compatible RNG wrapper
+
+Develop audio and GAN examples in Jupyter notebooks
+
+Enhance GUE spacing model
+
+Contributing
+
+Contributions are welcome! Please open an issue or submit a pull request.
+
+**Action:** Remember to replace `your-username` with your actual GitHub username.
