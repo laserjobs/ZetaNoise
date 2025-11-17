@@ -42,6 +42,8 @@ class ZetaNoiseGenerator:
         _zeta_zero_cache[cache_key] = zeros_imag
         return zeros_imag
 
+    # ... (rest of the file content before the generate function)
+
     def generate(self, length=1024, amplitude=0.1, seed=None):
         """
         Generates a zeta-modulated noise signal using vectorized operations.
@@ -54,13 +56,16 @@ class ZetaNoiseGenerator:
         Returns:
             np.ndarray: The generated noise signal.
         """
+        # 1. Use the local RNG object initialized with the seed
         rng = np.random.default_rng(seed)
         
+        # Base white noise generated using the local RNG
         base_noise = rng.standard_normal(length)
         t = np.arange(length)
         
         zeta_freqs = self.zeros[:, np.newaxis]
         if self.gue_scale > 0:
+            # FIX: Use the local rng.exponential() instead of the global np.random.exponential()
             repulsion_factors = 1 + self.gue_scale * rng.exponential(1, size=(self.num_zeros, 1))
             zeta_freqs *= repulsion_factors
         
@@ -69,6 +74,8 @@ class ZetaNoiseGenerator:
         modulation = amplitude * np.sum(sines, axis=0)
         
         return base_noise + modulation
+
+# ... (rest of the file content after the generate function)
 
     def spectrum(self, noise_signal):
         """
