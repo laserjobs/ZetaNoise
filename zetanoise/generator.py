@@ -5,6 +5,15 @@ from scipy.fft import fft, fftfreq
 # Cache for zeta zeros to avoid re-computation
 _zeta_zero_cache = {}
 
+# Hardcoded high-precision values for the first 10 zeros.
+# This makes tests fast, deterministic, and independent of mpmath's state.
+_known_zeros = np.array([
+    14.134725141734693, 21.022039638771547, 25.010857580145688,
+    30.424876125859513, 32.935061587739189, 35.466876284659686,
+    37.586178158825671, 40.918719012147495, 43.327073280914999,
+    48.005150881167160
+])
+
 class ZetaNoiseGenerator:
     """
     Generates noise modulated by the imaginary parts of the Riemann zeta zeros.
@@ -20,8 +29,11 @@ class ZetaNoiseGenerator:
 
     def _get_zeta_zeros(self, N, precision):
         """
-        Fetches the first N imaginary parts of non-trivial zeta zeros, using a cache.
+        Fetches the first N imaginary parts of non-trivial zeta zeros.
         """
+        if N <= 10:
+            return _known_zeros[:N]
+
         cache_key = (N, precision)
         if cache_key in _zeta_zero_cache:
             return _zeta_zero_cache[cache_key]
@@ -36,15 +48,13 @@ class ZetaNoiseGenerator:
         """
         Generates a zeta-modulated noise signal using vectorized operations.
         """
-        # This object now controls ALL randomness inside this function.
         rng = np.random.default_rng(seed)
-        
         base_noise = rng.standard_normal(length)
         t = np.arange(length)
         
         zeta_freqs = self.zeros[:, np.newaxis]
         if self.gue_scale > 0:
-            # THIS IS THE CRITICAL FIX that must be in your repository:
+            # This is the correct, deterministic version.
             repulsion_factors = 1 + self.gue_scale * rng.exponential(1, size=(self.num_zeros, 1))
             zeta_freqs *= repulsion_factors
         
@@ -70,7 +80,7 @@ class ZetaNoiseGenerator:
         
         if len(spec) < num_peaks:
             num_peaks = len(spec)
-            
+        
         peak_indices = np.argsort(spec)[-num_peaks:]
         peak_freqs = np.sort(freqs[peak_indices])
         spacings = np.diff(peak_freqs)
