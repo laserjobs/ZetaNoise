@@ -1,94 +1,63 @@
 import numpy as np
-import mpmath
-from scipy.fft import fft, fftfreq
+import pytest
+from zetanoise import ZetaNoiseGenerator
 
-# Cache for zeta zeros to avoid re-computation
-_zeta_zero_cache = {}
+def test_generator_initialization():
+    """Test that the generator initializes correctly."""
+    gen = ZetaNoiseGenerator(num_zeros=5)
+    assert len(gen.zeros) == 5
+    assert gen.zeros[0] == pytest.approx(14.1347, rel=1e-4)
 
-class ZetaNoiseGenerator:
-    """
-    Generates noise modulated by the imaginary parts of the Riemann zeta zeros.
-    """
-    def __init__(self, num_zeros=100, precision=50, gue_scale=0.01):
-        """
-        Initializes the generator.
-        """
-        mpmath.mp.dps = precision
-        self.num_zeros = num_zeros
-        self.gue_scale = gue_scale
-        self.zeros = self._get_zeta_zeros(self.num_zeros, precision)
+def test_generate_output_properties():
+    """Test the output of the generate method."""
+    gen = ZetaNoiseGenerator(num_zeros=10)
+    length = 1024
+    noise = gen.generate(length=length, seed=42)
+    
+    assert isinstance(noise, np.ndarray)
+    assert noise.shape == (length,)
+    assert not np.all(noise == 0)
 
-    def _get_zeta_zeros(self, N, precision):
-        """
-        Fetches the first N imaginary parts of non-trivial zeta zeros, using a cache.
-        For small N (<=10), use hardcoded high-precision values for speed and consistency.
-        """
-        cache_key = (N, precision)
-        if cache_key in _zeta_zero_cache:
-            return _zeta_zero_cache[cache_key]
+def test_reproducibility_with_seed():
+    """Test that the same seed produces the exact same noise, including GUE scaling."""
+    gen1 = ZetaNoiseGenerator(num_zeros=10, gue_scale=0.01)
+    gen2 = ZetaNoiseGenerator(num_zeros=10, gue_scale=0.01)
 
-        # Your excellent optimization:
-        if N <= 10:
-            known_zeros = np.array([
-                14.134725141734693, 21.022039638771547, 25.010857580145688,
-                30.424876125859513, 32.935061587739189, 35.466876284659686,
-                37.586178158825671, 40.918719012147495, 43.327073280914999,
-                48.005150881167160
-            ])
-            zeros_imag = known_zeros[:N]
-        else:
-            # Fallback to mpmath for larger N
-            print(f"Calculating first {N} zeta zeros with precision {precision} (this may take a moment)...")
-            zeros_complex = [mpmath.zetazero(k) for k in range(1, N + 1)]
-            zeros_imag = np.array([float(z.imag) for z in zeros_complex])
+    noise1 = gen1.generate(length=128, seed=123)
+    noise2 = gen2.generate(length=128, seed=123)
+    
+    # The strictest check will now pass because the function is fully deterministic.
+    np.testing.assert_array_equal(noise1, noise2)
 
-        _zeta_zero_cache[cache_key] = zeros_imag
-        return zeros_imag
+def test_spectrum_output():
+    """Test the output of the spectrum method."""
+    gen = ZetaNoiseGenerator(num_zeros=5)
+    noise = gen.generate(length=512)
+    freqs, spec = gen.spectrum(noise)
+    
+    expected_len = 512 // 2
+    assert freqs.shape == (expected_len,)
+    assert spec.shape == (expected_len,)
+    assert np.all(freqs >= 0)
 
-    def generate(self, length=1024, amplitude=0.1, seed=None):
-        """
-        Generates a zeta-modulated noise signal using vectorized operations.
-        """
-        rng = np.random.default_rng(seed)
-        base_noise = rng.standard_normal(length)
-        t = np.arange(length)
-        
-        zeta_freqs = self.zeros[:, np.newaxis]
-        if self.gue_scale > 0:
-            # The critical bug fix:
-            repulsion_factors = 1 + self.gue_scale * rng.exponential(1, size=(self.num_zeros, 1))
-            zeta_freqs *= repulsion_factors
-        
-        sines = np.sin(2 * np.pi * zeta_freqs * t / length)
-        modulation = amplitude * np.sum(sines, axis=0)
-        return base_noise + modulation
+def test_stats_output():
+    """Test that the stats method returns a dictionary with expected keys."""
+    gen = ZetaNoiseGenerator(num_zeros=5)
+    noise = gen.generate()
+    stats = gen.stats(noise)
+    
+    assert isinstance(stats, dict)
+    expected_keys = ['mean', 'std', 'spectrum_mean_power', 'avg_peak_spacing']
+    for key in expected_keys:
+        assert key in stats
 
-    def spectrum(self, noise_signal):
-        """
-        Computes the power spectrum of a given signal.
-        """
-        n = len(noise_signal)
-        freqs = fftfreq(n, d=1.0)[:n // 2]
-        spectrum_complex = fft(noise_signal)[:n // 2]
-        power_spectrum = np.abs(spectrum_complex)**2
-        return freqs, power_spectrum
-
-    def stats(self, noise_signal, num_peaks=20):
-        """
-        Computes basic statistics of the noise and its spectrum.
-        """
-        freqs, spec = self.spectrum(noise_signal)
-        
-        if len(spec) < num_peaks:
-            num_peaks = len(spec)
-        
-        peak_indices = np.argsort(spec)[-num_peaks:]
-        peak_freqs = np.sort(freqs[peak_indices])
-        spacings = np.diff(peak_freqs)
-        
-        return {
-            'mean': np.mean(noise_signal),
-            'std': np.std(noise_signal),
-            'spectrum_mean_power': np.mean(spec),
-            'avg_peak_spacing': np.mean(spacings) if len(spacings) > 0 else 0
-        }
+def test_caching_and_hardcoded_values():
+    """Test that the hardcoded values are used and are consistent."""
+    # This will use the fast, hardcoded values.
+    gen1 = ZetaNoiseGenerator(num_zeros=5)
+    # This will use them too.
+    gen3 = ZetaNoiseGenerator(num_zeros=6)
+    
+    np.testing.assert_array_equal(gen1.zeros, gen3.zeros[:5])
+    # THIS IS THE CORRECTED LINE:
+    assert gen1.zeros.shape != gen3.zeros.shape
