@@ -8,14 +8,12 @@ _zeta_zero_cache = {}
 class ZetaNoiseGenerator:
     """
     Generates noise modulated by the imaginary parts of the Riemann zeta zeros.
-    
-    This creates a "rigid" noise signal whose power spectrum contains peaks
-    corresponding to the zeta zeros, mimicking properties of GUE statistics.
     """
     def __init__(self, num_zeros=100, precision=50, gue_scale=0.01):
         """
         Initializes the generator.
         """
+        # This now uses the precision set by the fixture in tests, or the default.
         mpmath.mp.dps = precision
         self.num_zeros = num_zeros
         self.gue_scale = gue_scale
@@ -45,7 +43,7 @@ class ZetaNoiseGenerator:
         
         zeta_freqs = self.zeros[:, np.newaxis]
         if self.gue_scale > 0:
-            # THIS IS THE REAL FIX:
+            # THIS IS THE CRITICAL FIX:
             repulsion_factors = 1 + self.gue_scale * rng.exponential(1, size=(self.num_zeros, 1))
             zeta_freqs *= repulsion_factors
         
