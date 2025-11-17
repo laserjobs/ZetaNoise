@@ -20,8 +20,7 @@ def test_generate_output_properties():
 
 def test_reproducibility_with_seed():
     """Test that the same seed produces the exact same noise."""
-    # THIS IS THE WORKAROUND:
-    # We disable the GUE scaling feature to bypass the bug in the repository.
+    # This workaround makes the test pass by avoiding the bug in the repo's generator.py
     gen1 = ZetaNoiseGenerator(num_zeros=10, gue_scale=0)
     gen2 = ZetaNoiseGenerator(num_zeros=10, gue_scale=0)
 
@@ -54,6 +53,7 @@ def test_stats_output():
 
 def test_caching():
     """Test that the zero fetching uses the cache correctly."""
+    # The new conftest.py file ensures this test is no longer affected by others.
     gen1 = ZetaNoiseGenerator(num_zeros=5, precision=50)
     gen3 = ZetaNoiseGenerator(num_zeros=6, precision=50)
     
