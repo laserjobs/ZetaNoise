@@ -30,7 +30,6 @@ class ZetaNoiseGenerator:
     def _get_zeta_zeros(self, N, precision):
         """
         Fetches the first N imaginary parts of non-trivial zeta zeros, using a cache.
-        The cache key is a tuple of (N, precision) to ensure correctness.
         """
         cache_key = (N, precision)
         if cache_key in _zeta_zero_cache:
@@ -45,25 +44,17 @@ class ZetaNoiseGenerator:
     def generate(self, length=1024, amplitude=0.1, seed=None):
         """
         Generates a zeta-modulated noise signal using vectorized operations.
-
-        Args:
-            length (int): The desired length of the noise signal.
-            amplitude (float): The amplitude of the sinusoidal "kicks" from the zeros.
-            seed (int, optional): A seed for the random number generator for reproducibility.
-
-        Returns:
-            np.ndarray: The generated noise signal.
         """
-        # CRITICAL FIX: Use the local RNG object initialized with the seed
+        # This object now controls ALL randomness inside this function.
         rng = np.random.default_rng(seed)
         
-        # Base white noise generated using the local RNG
+        # Base noise is controlled by rng.
         base_noise = rng.standard_normal(length)
         t = np.arange(length)
         
         zeta_freqs = self.zeros[:, np.newaxis]
         if self.gue_scale > 0:
-            # CRITICAL FIX: Ensure the local rng object handles the exponential distribution
+            # THIS IS THE CRITICAL FIX: Use 'rng.exponential' not 'np.random.exponential'
             repulsion_factors = 1 + self.gue_scale * rng.exponential(1, size=(self.num_zeros, 1))
             zeta_freqs *= repulsion_factors
         
@@ -76,12 +67,6 @@ class ZetaNoiseGenerator:
     def spectrum(self, noise_signal):
         """
         Computes the power spectrum of a given signal.
-
-        Args:
-            noise_signal (np.ndarray): The input signal.
-
-        Returns:
-            tuple[np.ndarray, np.ndarray]: A tuple containing positive frequencies and the power spectrum.
         """
         n = len(noise_signal)
         freqs = fftfreq(n, d=1.0)[:n // 2]
@@ -92,13 +77,6 @@ class ZetaNoiseGenerator:
     def stats(self, noise_signal, num_peaks=20):
         """
         Computes basic statistics of the noise and its spectrum.
-
-        Args:
-            noise_signal (np.ndarray): The input signal.
-            num_peaks (int): The number of top spectral peaks to analyze for spacing.
-
-        Returns:
-            dict: A dictionary of computed statistics.
         """
         freqs, spec = self.spectrum(noise_signal)
         
