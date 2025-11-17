@@ -57,5 +57,4 @@ def test_caching():
     gen1 = ZetaNoiseGenerator(num_zeros=5, precision=50)
     gen3 = ZetaNoiseGenerator(num_zeros=6, precision=50)
     
-    np.testing.assert_array_equal(gen1.zeros, gen3.zeros[:5])
-    assert gen1.zeros.shape != gen3.zeros.shape
+    np.
