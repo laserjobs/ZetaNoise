@@ -21,14 +21,27 @@ class ZetaNoiseGenerator:
     def _get_zeta_zeros(self, N, precision):
         """
         Fetches the first N imaginary parts of non-trivial zeta zeros, using a cache.
+        For small N (<=10), use hardcoded high-precision values for speed and consistency.
         """
         cache_key = (N, precision)
         if cache_key in _zeta_zero_cache:
             return _zeta_zero_cache[cache_key]
-        
-        print(f"Calculating first {N} zeta zeros with precision {precision} (this may take a moment)...")
-        zeros_complex = [mpmath.zetazero(k) for k in range(1, N + 1)]
-        zeros_imag = np.array([float(z.imag) for z in zeros_complex])
+
+        # Your excellent optimization:
+        if N <= 10:
+            known_zeros = np.array([
+                14.134725141734693, 21.022039638771547, 25.010857580145688,
+                30.424876125859513, 32.935061587739189, 35.466876284659686,
+                37.586178158825671, 40.918719012147495, 43.327073280914999,
+                48.005150881167160
+            ])
+            zeros_imag = known_zeros[:N]
+        else:
+            # Fallback to mpmath for larger N
+            print(f"Calculating first {N} zeta zeros with precision {precision} (this may take a moment)...")
+            zeros_complex = [mpmath.zetazero(k) for k in range(1, N + 1)]
+            zeros_imag = np.array([float(z.imag) for z in zeros_complex])
+
         _zeta_zero_cache[cache_key] = zeros_imag
         return zeros_imag
 
@@ -42,7 +55,7 @@ class ZetaNoiseGenerator:
         
         zeta_freqs = self.zeros[:, np.newaxis]
         if self.gue_scale > 0:
-            # THIS IS THE CRITICAL FIX:
+            # The critical bug fix:
             repulsion_factors = 1 + self.gue_scale * rng.exponential(1, size=(self.num_zeros, 1))
             zeta_freqs *= repulsion_factors
         
