@@ -15,12 +15,6 @@ class ZetaNoiseGenerator:
     def __init__(self, num_zeros=100, precision=50, gue_scale=0.01):
         """
         Initializes the generator.
-        
-        Args:
-            num_zeros (int): The number of non-trivial zeta zeros to use for modulation.
-            precision (int): The decimal precision for mpmath calculations.
-            gue_scale (float): Scaling factor for the GUE-inspired spacing simulation.
-                               Set to 0 to disable.
         """
         mpmath.mp.dps = precision
         self.num_zeros = num_zeros
@@ -45,23 +39,22 @@ class ZetaNoiseGenerator:
         """
         Generates a zeta-modulated noise signal using vectorized operations.
         """
-        # This object now controls ALL randomness inside this function.
         rng = np.random.default_rng(seed)
-        
-        # Base noise is controlled by rng.
         base_noise = rng.standard_normal(length)
         t = np.arange(length)
         
         zeta_freqs = self.zeros[:, np.newaxis]
         if self.gue_scale > 0:
-            # THIS IS THE CRITICAL FIX: Use 'rng.exponential' not 'np.random.exponential'
-            repulsion_factors = 1 + self.gue_scale * rng.exponential(1, size=(self.num_zeros, 1))
-            zeta_freqs *= repulsion_factors
+            # --- DEBUGGING LINE ---
+            # If you see this error in your test log, it means the file was successfully updated.
+            raise ValueError("DEBUG: The new generator.py code is now running!")
+            
+            # The real fix would be this line:
+            # repulsion_factors = 1 + self.gue_scale * rng.exponential(1, size=(self.num_zeros, 1))
+            # zeta_freqs *= repulsion_factors
         
         sines = np.sin(2 * np.pi * zeta_freqs * t / length)
-        
         modulation = amplitude * np.sum(sines, axis=0)
-        
         return base_noise + modulation
 
     def spectrum(self, noise_signal):
@@ -82,7 +75,7 @@ class ZetaNoiseGenerator:
         
         if len(spec) < num_peaks:
             num_peaks = len(spec)
-            
+        
         peak_indices = np.argsort(spec)[-num_peaks:]
         peak_freqs = np.sort(freqs[peak_indices])
         spacings = np.diff(peak_freqs)
