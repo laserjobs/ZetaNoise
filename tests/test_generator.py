@@ -19,16 +19,13 @@ def test_generate_output_properties():
     assert not np.all(noise == 0)
 
 def test_reproducibility_with_seed():
-    """Test that the same seed produces the exact same noise."""
-    # Using two separate instances to be robust.
-    gen1 = ZetaNoiseGenerator(num_zeros=10)
-    gen2 = ZetaNoiseGenerator(num_zeros=10)
+    """Test that the same seed produces the exact same noise, including GUE scaling."""
+    gen1 = ZetaNoiseGenerator(num_zeros=10, gue_scale=0.01)
+    gen2 = ZetaNoiseGenerator(num_zeros=10, gue_scale=0.01)
 
     noise1 = gen1.generate(length=128, seed=123)
     noise2 = gen2.generate(length=128, seed=123)
     
-    # FINAL FIX: Revert to the strictest possible check.
-    # If the generate() function is truly deterministic, this MUST pass.
     np.testing.assert_array_equal(noise1, noise2)
 
 def test_spectrum_output():
