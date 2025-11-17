@@ -2,9 +2,6 @@ import numpy as np
 import pytest
 from zetanoise import ZetaNoiseGenerator
 
-# Safeguard: Set a consistent global seed for the entire test module to ensure NumPy environment is fixed
-np.random.seed(42)
-
 def test_generator_initialization():
     """Test that the generator initializes correctly."""
     gen = ZetaNoiseGenerator(num_zeros=5, precision=30)
@@ -22,17 +19,17 @@ def test_generate_output_properties():
     assert not np.all(noise == 0)
 
 def test_reproducibility_with_seed():
-    """Test that the same seed produces the same noise, allowing for float precision."""
-    
-    # FIX: Create two separate, identical generator instances for maximum isolation
-    gen1 = ZetaNoiseGenerator(num_zeros=10, precision=50, gue_scale=0.01)
-    gen2 = ZetaNoiseGenerator(num_zeros=10, precision=50, gue_scale=0.01)
-    
+    """Test that the same seed produces the exact same noise."""
+    # Using two separate instances to be robust.
+    gen1 = ZetaNoiseGenerator(num_zeros=10)
+    gen2 = ZetaNoiseGenerator(num_zeros=10)
+
     noise1 = gen1.generate(length=128, seed=123)
     noise2 = gen2.generate(length=128, seed=123)
     
-    # FIX: Use decimal=5 tolerance, as 6 decimals proved too strict for the CI environment
-    np.testing.assert_array_almost_equal(noise1, noise2, decimal=5)
+    # FINAL FIX: Revert to the strictest possible check.
+    # If the generate() function is truly deterministic, this MUST pass.
+    np.testing.assert_array_equal(noise1, noise2)
 
 def test_spectrum_output():
     """Test the output of the spectrum method."""
@@ -58,14 +55,9 @@ def test_stats_output():
 
 def test_caching():
     """Test that the zero fetching uses the cache correctly."""
-    # Initialize with 5 zeros
     gen1 = ZetaNoiseGenerator(num_zeros=5, precision=50)
-    # Initialize with 5 zeros again (should hit cache)
     gen2 = ZetaNoiseGenerator(num_zeros=5, precision=50) 
-    
-    # Initialize with 6 zeros (should calculate new ones)
     gen3 = ZetaNoiseGenerator(num_zeros=6, precision=50)
     
-    # Check that gen1 and gen2 share the same array (or content)
     np.testing.assert_array_equal(gen1.zeros, gen2.zeros)
     assert not np.array_equal(gen1.zeros, gen3.zeros[:5])
