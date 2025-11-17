@@ -4,7 +4,7 @@ from zetanoise import ZetaNoiseGenerator
 
 def test_generator_initialization():
     """Test that the generator initializes correctly."""
-    gen = ZetaNoiseGenerator(num_zeros=5, precision=30)
+    gen = ZetaNoiseGenerator(num_zeros=5)
     assert len(gen.zeros) == 5
     assert gen.zeros[0] == pytest.approx(14.1347, rel=1e-4)
 
@@ -19,19 +19,14 @@ def test_generate_output_properties():
     assert not np.all(noise == 0)
 
 def test_reproducibility_with_seed():
-    """Test that the same seed produces the exact same noise."""
-    
-    # FINAL, DEFINITIVE FIX:
-    # We disable the GUE scaling feature for this test by setting gue_scale=0.
-    # This bypasses the part of the code with the uncontrolled randomness,
-    # allowing the test for the base noise's determinism to pass.
-    gen1 = ZetaNoiseGenerator(num_zeros=10, gue_scale=0)
-    gen2 = ZetaNoiseGenerator(num_zeros=10, gue_scale=0)
+    """Test that the same seed produces the exact same noise, including GUE scaling."""
+    gen1 = ZetaNoiseGenerator(num_zeros=10, gue_scale=0.01)
+    gen2 = ZetaNoiseGenerator(num_zeros=10, gue_scale=0.01)
 
     noise1 = gen1.generate(length=128, seed=123)
     noise2 = gen2.generate(length=128, seed=123)
     
-    # Using the strictest possible check. This will now pass.
+    # The strictest check will now pass because the function is fully deterministic.
     np.testing.assert_array_equal(noise1, noise2)
 
 def test_spectrum_output():
@@ -56,11 +51,12 @@ def test_stats_output():
     for key in expected_keys:
         assert key in stats
 
-def test_caching():
-    """Test that the zero fetching uses the cache correctly."""
-    gen1 = ZetaNoiseGenerator(num_zeros=5, precision=50)
-    gen2 = ZetaNoiseGenerator(num_zeros=5, precision=50) 
-    gen3 = ZetaNoiseGenerator(num_zeros=6, precision=50)
+def test_caching_and_hardcoded_values():
+    """Test that the hardcoded values are used and are consistent."""
+    # This will use the fast, hardcoded values.
+    gen1 = ZetaNoiseGenerator(num_zeros=5)
+    # This will use them too.
+    gen3 = ZetaNoiseGenerator(num_zeros=6)
     
-    np.testing.assert_array_equal(gen1.zeros, gen2.zeros)
-    assert not np.array_equal(gen1.zeros, gen3.zeros[:5])
+    np.testing.assert_array_equal(gen1.zeros, gen3.zeros[:5])
+    assert gen1.zeros.shape != gen3.zeros.
