@@ -19,19 +19,15 @@ def test_generate_output_properties():
     assert not np.all(noise == 0)
 
 def test_reproducibility_with_seed():
-    """Test that the same seed produces the exact same noise."""
-    
-    # FINAL, DEFINITIVE FIX:
-    # We disable the GUE scaling feature for this test by setting gue_scale=0.
-    # This bypasses the part of the code with the uncontrolled randomness,
-    # allowing the test for the base noise's determinism to pass.
-    gen1 = ZetaNoiseGenerator(num_zeros=10, gue_scale=0)
-    gen2 = ZetaNoiseGenerator(num_zeros=10, gue_scale=0)
+    """Test that the same seed produces the exact same noise, including GUE scaling."""
+    # This test will now pass because the library code is correct.
+    gen1 = ZetaNoiseGenerator(num_zeros=10, gue_scale=0.01)
+    gen2 = ZetaNoiseGenerator(num_zeros=10, gue_scale=0.01)
 
     noise1 = gen1.generate(length=128, seed=123)
     noise2 = gen2.generate(length=128, seed=123)
     
-    # Using the strictest possible check. This will now pass.
+    # The strictest check will now pass because the function is fully deterministic.
     np.testing.assert_array_equal(noise1, noise2)
 
 def test_spectrum_output():
@@ -59,8 +55,7 @@ def test_stats_output():
 def test_caching():
     """Test that the zero fetching uses the cache correctly."""
     gen1 = ZetaNoiseGenerator(num_zeros=5, precision=50)
-    gen2 = ZetaNoiseGenerator(num_zeros=5, precision=50) 
     gen3 = ZetaNoiseGenerator(num_zeros=6, precision=50)
     
-    np.testing.assert_array_equal(gen1.zeros, gen2.zeros)
-    assert not np.array_equal(gen1.zeros, gen3.zeros[:5])
+    np.testing.assert_array_equal(gen1.zeros, gen3.zeros[:5])
+    assert gen1.zeros.shape != gen3.zeros.shape
