@@ -3,7 +3,8 @@ import pytest
 from zetanoise import ZetaNoiseGenerator
 
 def test_generator_initialization():
-    """Test that the generator initializes correctly."""
+    """Test that the generator initializes correctly with specific precision."""
+    # This test will use precision=30, but the fixture will reset it afterwards.
     gen = ZetaNoiseGenerator(num_zeros=5, precision=30)
     assert len(gen.zeros) == 5
     assert gen.zeros[0] == pytest.approx(14.1347, rel=1e-4)
@@ -52,12 +53,10 @@ def test_stats_output():
 
 def test_caching():
     """Test that the zero fetching uses the cache correctly."""
-    gen1 = ZetaNoiseGenerator(num_zeros=5, precision=50)
-    gen2 = ZetaNoiseGenerator(num_zeros=5, precision=50) 
-    gen3 = ZetaNoiseGenerator(num_zeros=6, precision=50)
+    # All tests now run with a consistent precision of 50 due to the fixture.
+    gen1 = ZetaNoiseGenerator(num_zeros=5)
+    gen3 = ZetaNoiseGenerator(num_zeros=6)
     
-    # Check that the first 5 zeros are the same in both generators
+    # This assertion is now reliable because the precision is stable.
     np.testing.assert_array_equal(gen1.zeros, gen3.zeros[:5])
-    
-    # FIX: Check that the full arrays are NOT the same size, which was the original intent.
     assert gen1.zeros.shape != gen3.zeros.shape
