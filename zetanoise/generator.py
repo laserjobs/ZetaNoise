@@ -13,7 +13,6 @@ class ZetaNoiseGenerator:
         """
         Initializes the generator.
         """
-        # This now uses the precision set by the fixture in tests, or the default.
         mpmath.mp.dps = precision
         self.num_zeros = num_zeros
         self.gue_scale = gue_scale
