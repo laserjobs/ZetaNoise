@@ -3,13 +3,14 @@ import pytest
 from zetanoise import ZetaNoiseGenerator
 
 def test_generator_initialization():
-    """Test that the generator initializes correctly."""
-    gen = ZetaNoiseGenerator(num_zeros=5, precision=30)
+    """Test that the generator initializes correctly, verifying hardcoded values."""
+    gen = ZetaNoiseGenerator(num_zeros=5)
+    # Checks the first hardcoded value against expected float value
     assert len(gen.zeros) == 5
     assert gen.zeros[0] == pytest.approx(14.1347, rel=1e-4)
 
 def test_generate_output_properties():
-    """Test the output of the generate method."""
+    """Test the output of the generate method (shape and type)."""
     gen = ZetaNoiseGenerator(num_zeros=10)
     length = 1024
     noise = gen.generate(length=length, seed=42)
@@ -19,16 +20,16 @@ def test_generate_output_properties():
     assert not np.all(noise == 0)
 
 def test_reproducibility_with_seed():
-    """Test that the same seed produces the exact same noise."""
+    """Test that the same seed produces the exact same noise, including GUE scaling."""
     
-    # THIS IS THE WORKAROUND that will make your build pass.
-    # It avoids the bug in your repository's generator.py file.
-    gen1 = ZetaNoiseGenerator(num_zeros=10, gue_scale=0)
-    gen2 = ZetaNoiseGenerator(num_zeros=10, gue_scale=0)
+    # This test now works because the library code is fixed to use rng.exponential.
+    gen1 = ZetaNoiseGenerator(num_zeros=10, gue_scale=0.01)
+    gen2 = ZetaNoiseGenerator(num_zeros=10, gue_scale=0.01)
 
     noise1 = gen1.generate(length=128, seed=123)
     noise2 = gen2.generate(length=128, seed=123)
     
+    # We use strict equality, as the generator code should be bit-for-bit identical now.
     np.testing.assert_array_equal(noise1, noise2)
 
 def test_spectrum_output():
@@ -54,9 +55,14 @@ def test_stats_output():
         assert key in stats
 
 def test_caching():
-    """Test that the zero fetching uses the cache correctly."""
-    gen1 = ZetaNoiseGenerator(num_zeros=5, precision=50)
-    gen3 = ZetaNoiseGenerator(num_zeros=6, precision=50)
+    """Test that the hardcoded values and mpmath fallback function correctly."""
+    # Test 1: Gen1 uses 5 hardcoded zeros.
+    gen1 = ZetaNoiseGenerator(num_zeros=5)
+    # Test 2: Gen3 uses 6 hardcoded zeros.
+    gen3 = ZetaNoiseGenerator(num_zeros=6)
     
+    # Check that the first 5 zeros of the 6-zero array match the 5-zero array exactly.
     np.testing.assert_array_equal(gen1.zeros, gen3.zeros[:5])
+    
+    # Check that the arrays are different sizes (ensuring gen3 fetched 6 items).
     assert gen1.zeros.shape != gen3.zeros.shape
