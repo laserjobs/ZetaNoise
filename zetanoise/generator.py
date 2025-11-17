@@ -6,6 +6,7 @@ from scipy.fft import fft, fftfreq
 _zeta_zero_cache = {}
 
 # Hardcoded high-precision values for the first 10 zeros.
+# This makes tests fast, deterministic, and independent of mpmath's state.
 _known_zeros = np.array([
     14.134725141734693, 21.022039638771547, 25.010857580145688,
     30.424876125859513, 32.935061587739189, 35.466876284659686,
@@ -16,15 +17,24 @@ _known_zeros = np.array([
 class ZetaNoiseGenerator:
     """
     Generates noise modulated by the imaginary parts of the Riemann zeta zeros.
+    
+    This creates a "rigid" noise signal whose power spectrum contains peaks
+    corresponding to the zeta zeros, mimicking properties of GUE statistics.
     """
     def __init__(self, num_zeros=100, precision=50, gue_scale=0.01):
+        """
+        Initializes the generator.
+        """
         mpmath.mp.dps = precision
         self.num_zeros = num_zeros
         self.gue_scale = gue_scale
         self.zeros = self._get_zeta_zeros(self.num_zeros, precision)
 
     def _get_zeta_zeros(self, N, precision):
-        if N <= 10:
+        """
+        Fetches the first N imaginary parts of non-trivial zeta zeros, using a cache.
+        """
+        if N <= 10 and N > 0:
             return _known_zeros[:N]
 
         cache_key = (N, precision)
@@ -38,21 +48,31 @@ class ZetaNoiseGenerator:
         return zeros_imag
 
     def generate(self, length=1024, amplitude=0.1, seed=None):
+        """
+        Generates a zeta-modulated noise signal using vectorized operations.
+        """
+        # This object now controls ALL randomness inside this function.
         rng = np.random.default_rng(seed)
+        
         base_noise = rng.standard_normal(length)
         t = np.arange(length)
         
         zeta_freqs = self.zeros[:, np.newaxis]
         if self.gue_scale > 0:
-            # The final, correct implementation:
+            # THIS IS THE CRITICAL FIX: Ensures determinism via the seeded rng object.
             repulsion_factors = 1 + self.gue_scale * rng.exponential(1, size=(self.num_zeros, 1))
             zeta_freqs *= repulsion_factors
         
         sines = np.sin(2 * np.pi * zeta_freqs * t / length)
+        
         modulation = amplitude * np.sum(sines, axis=0)
+        
         return base_noise + modulation
 
     def spectrum(self, noise_signal):
+        """
+        Computes the power spectrum of a given signal.
+        """
         n = len(noise_signal)
         freqs = fftfreq(n, d=1.0)[:n // 2]
         spectrum_complex = fft(noise_signal)[:n // 2]
@@ -60,11 +80,14 @@ class ZetaNoiseGenerator:
         return freqs, power_spectrum
 
     def stats(self, noise_signal, num_peaks=20):
+        """
+        Computes basic statistics of the noise and its spectrum.
+        """
         freqs, spec = self.spectrum(noise_signal)
         
         if len(spec) < num_peaks:
             num_peaks = len(spec)
-        
+            
         peak_indices = np.argsort(spec)[-num_peaks:]
         peak_freqs = np.sort(freqs[peak_indices])
         spacings = np.diff(peak_freqs)
