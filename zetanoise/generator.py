@@ -45,13 +45,9 @@ class ZetaNoiseGenerator:
         
         zeta_freqs = self.zeros[:, np.newaxis]
         if self.gue_scale > 0:
-            # --- DEBUGGING LINE ---
-            # If you see this error in your test log, it means the file was successfully updated.
-            raise ValueError("DEBUG: The new generator.py code is now running!")
-            
-            # The real fix would be this line:
-            # repulsion_factors = 1 + self.gue_scale * rng.exponential(1, size=(self.num_zeros, 1))
-            # zeta_freqs *= repulsion_factors
+            # THIS IS THE REAL FIX:
+            repulsion_factors = 1 + self.gue_scale * rng.exponential(1, size=(self.num_zeros, 1))
+            zeta_freqs *= repulsion_factors
         
         sines = np.sin(2 * np.pi * zeta_freqs * t / length)
         modulation = amplitude * np.sum(sines, axis=0)
